@@ -1,0 +1,27 @@
+{
+  "name": "@adinet/autorix",
+  "version": "0.1.0",
+  "description": "Flexible and secure policy evaluator inspired by AWS IAM, built for NestJS and Node.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --out-dir dist",
+    "dev": "tsup src/index.ts --watch",
+    "test": "vitest"
+  },
+  "keywords": [
+    "iam",
+    "permissions",
+    "policy",
+    "authorization",
+    "nestjs",
+    "access-control"
+  ],
+  "author": "Adinet",
+  "license": "MIT",
+  "dependencies": {
+    "class-validator": "^0.14.2",
+    "lodash": "^4.17.21"
+  }
+}
