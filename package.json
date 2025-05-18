@@ -11,6 +11,7 @@
     "packages/autorix-prisma-adapter"
   ],
   "scripts": {
+    "co": "sui-mono commit",
     "build": "pnpm -r run build",
     "dev": "pnpm -r run dev",
     "test": "pnpm -r run test",
@@ -25,6 +26,7 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
+    "@s-ui/mono": "^2.45.0",
     "eslint": "^9.26.0",
     "prettier": "^3.5.3",
     "tsup": "^8.4.0",
