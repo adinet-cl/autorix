@@ -1,0 +1,21 @@
+{
+  "name": "@adinet/autorix-nestjs",
+  "version": "1.0.0",
+  "description": "",
+  "packageManager": "pnpm@10.10.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --out-dir dist",
+    "dev": "tsup src/index.ts --watch",
+    "test": "vitest"
+  },
+  "keywords": [
+    "nestjs",
+    "permissions",
+    "policy",
+    "authorization",
+    "access-control"
+  ],
+  "author": "Adinet",
+  "license": "MIT"
+}
