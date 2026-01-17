@@ -32,6 +32,12 @@ importers:
 
   packages/core: {}
 
+  packages/storage:
+    dependencies:
+      '@autorix/core':
+        specifier: workspace:*
+        version: link:../core
+
 packages:
 
   '@babel/code-frame@7.27.1':
