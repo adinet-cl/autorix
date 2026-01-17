@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { evaluateAll } from "@autorix/core";
-import type { AutorixContext } from "@autorix/core";
+import type { AutorixContext, AutorixResource } from "@autorix/core";
 import type { PolicyProvider } from "@autorix/storage";
 import { AUTORIX_ACTIONS_KEY, AUTORIX_OPTIONS, AUTORIX_POLICY_PROVIDER } from "./autorix.constants";
 import type { AutorixNestjsOptions, PrincipalResolverResult } from "./autorix.interfaces";
@@ -43,7 +43,7 @@ function defaultContextResolver(
   ctx: ExecutionContext,
   scope: any,
   principal: PrincipalResolverResult,
-  resource?: Record<string, any>
+  resource?: AutorixResource
 ): AutorixContext {
   const req = getReq(ctx);
 
@@ -66,6 +66,18 @@ function defaultContextResolver(
   };
 }
 
+// imports omitidos para brevedad (los mismos que ya usas)
+
+function inferResourceTypeFromAction(action: string): string | undefined {
+  const parts = action.split(":");
+  return parts.length >= 2 ? parts[1] : undefined;
+}
+
+function buildResourceString(type?: string, id?: string) {
+  if (!type) return "*";
+  return `${type}/${id ?? "*"}`;
+}
+
 @Injectable()
 export class AutorixGuard implements CanActivate {
   constructor(
@@ -79,28 +91,55 @@ export class AutorixGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-
-    const resourceMeta = this.reflector.getAllAndOverride<AutorixResourceMeta>(AUTORIX_RESOURCE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (!actions || actions.length === 0) return true;
+    if (!actions?.length) return true;
 
     const scope = await (this.options.scopeResolver?.(context) ?? defaultScopeResolver(context));
+    const principal =
+      await (this.options.principalResolver?.(context) ?? defaultPrincipalResolver(context));
 
-    const principal = await (this.options.principalResolver?.(context) ?? defaultPrincipalResolver(context));
+    if (!principal.principalId) throw new ForbiddenException();
 
-    if (!principal.principalId) {
-      if ((this.options.onMissingPrincipal ?? "deny") === "throw") {
-        throw new UnauthorizedException("Missing principal");
+    const req = getReq(context);
+    const execCtx = { req, context };
+
+    // ----------------------
+    // Resource resolution
+    // ----------------------
+    const meta = this.reflector.getAllAndOverride<AutorixResourceMeta>(
+      AUTORIX_RESOURCE_KEY,
+      [context.getHandler(), context.getClass()]
+    );
+
+    let resource: any = undefined;
+
+    try {
+      if (meta) {
+        if (meta.mode === "param") {
+          // Nivel 1
+          const id = req?.params?.[meta.param ?? "id"];
+          resource = {
+            type: meta.type,
+            id: id != null ? String(id) : undefined,
+          };
+        } else {
+          // Nivel 2 (resolver)
+          const id = meta.id ? await meta.id(execCtx) : undefined;
+          const attrs = meta.attributes ? await meta.attributes(execCtx) : undefined;
+          const tenantId = meta.tenantId ? await meta.tenantId(execCtx) : undefined;
+
+          resource = {
+            type: meta.type,
+            id: id != null ? String(id) : undefined,
+            attributes: attrs,
+            tenantId,
+          };
+        }
       }
-      throw new ForbiddenException("Forbidden");
-    }
 
-    const resource =
-      (await this.options.resourceResolver?.(context)) ??
-      undefined;
+    } catch {
+      // Fail closed
+      throw new ForbiddenException("Resource resolution failed");
+    }
 
     const ctx =
       (await this.options.contextResolver?.(context, scope, principal, resource)) ??
@@ -113,15 +152,12 @@ export class AutorixGuard implements CanActivate {
       groupIds: principal.groupIds,
     });
 
-    const policyDocs = policies
-      .map((p) => p?.document)
-      .filter(Boolean);
+    const policyDocs = policies.map(p => p.document).filter(Boolean);
 
     for (const action of actions) {
-
       const decision = evaluateAll({
         action,
-        resource: ctx.resource?.type ? `${ctx.resource.type}/*` : "*",
+        resource: buildResourceString(resource?.type, resource?.id),
         policies: policyDocs,
         ctx,
       });
@@ -129,10 +165,9 @@ export class AutorixGuard implements CanActivate {
       if (!decision.allowed) {
         throw new ForbiddenException(`Forbidden by policy (${decision.reason})`);
       }
-
     }
 
     return true;
-
   }
 }
+

@@ -68,20 +68,20 @@ export type ResourceResolverValue =
   | undefined
   | Record<string, any>;
 
-export type AutorixResourceMeta = {
-  type: string;
-  /**
-   * id puede ser string o function (ej: params.id)
-   */
-  id?: (ctx: AutorixExecutionCtx) => string | number | null | undefined;
-
-  /**
-   * attributes puede ser sync/async (ej: traer invoice y sacar tenantId/ownerId)
-   */
-  attributes?: (ctx: AutorixExecutionCtx) => Promise<ResourceResolverValue> | ResourceResolverValue;
-
-  /**
-   * tenantId opcional (para ABAC y validación rápida)
-   */
-  tenantId?: (ctx: AutorixExecutionCtx) => Promise<string | undefined> | string | undefined;
-};
+export type AutorixResourceMeta =
+  | {
+    mode: "param";
+    type: string;
+    param?: string;
+  }
+  | {
+    mode: "resolver";
+    type: string;
+    id?: (ctx: AutorixExecutionCtx) => string | number | null | undefined;
+    attributes?: (
+      ctx: AutorixExecutionCtx
+    ) => Promise<Record<string, any> | undefined> | Record<string, any> | undefined;
+    tenantId?: (
+      ctx: AutorixExecutionCtx
+    ) => Promise<string | undefined> | string | undefined;
+  };

@@ -1,11 +1,12 @@
 import { SetMetadata } from "@nestjs/common";
 import { AUTORIX_RESOURCE_KEY } from "./autorix.constants";
-import type { AutorixResourceMeta } from "./autorix.interfaces";
+import { AutorixResourceMeta } from "./autorix.interfaces";
 
-export function Resource(meta: Omit<AutorixResourceMeta, "mode">) {
+export function ResourceParam(type: string, param = "id") {
   return SetMetadata(AUTORIX_RESOURCE_KEY, {
-    ...meta,
-    mode: "resolver",
+    mode: "param",
+    type,
+    param,
   } satisfies AutorixResourceMeta);
 }
 
