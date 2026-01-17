@@ -31,7 +31,8 @@ export interface AutorixNestjsOptions {
   contextResolver?: (
     ctx: ExecutionContext,
     scope: AutorixScope,
-    principal: PrincipalResolverResult
+    principal: PrincipalResolverResult,
+    resource?: Record<string, any>
   ) => Promise<AutorixContext> | AutorixContext;
 
   /**
@@ -53,4 +54,34 @@ export type AutorixModuleAsyncOptions = {
   inject?: any[];
   useFactory: (...args: any[]) => Promise<AutorixNestjsOptions> | AutorixNestjsOptions;
   policyProvider: PolicyProvider; // para MVP: directo
+};
+
+export type AutorixExecutionCtx = {
+  req: any;
+  context: ExecutionContext;
+};
+
+export type ResourceResolverValue =
+  | string
+  | number
+  | null
+  | undefined
+  | Record<string, any>;
+
+export type AutorixResourceMeta = {
+  type: string;
+  /**
+   * id puede ser string o function (ej: params.id)
+   */
+  id?: (ctx: AutorixExecutionCtx) => string | number | null | undefined;
+
+  /**
+   * attributes puede ser sync/async (ej: traer invoice y sacar tenantId/ownerId)
+   */
+  attributes?: (ctx: AutorixExecutionCtx) => Promise<ResourceResolverValue> | ResourceResolverValue;
+
+  /**
+   * tenantId opcional (para ABAC y validación rápida)
+   */
+  tenantId?: (ctx: AutorixExecutionCtx) => Promise<string | undefined> | string | undefined;
 };

@@ -21,6 +21,15 @@ export interface PolicyDocument {
 
 export type ScopeType = 'GLOBAL' | 'TENANT' | 'LEGAL_ENTITY' | 'WORKSPACE' | 'APP' | string;
 
+export type AutorixResource = {
+  type: string;
+  id: string;
+  tenantId?: string;
+  ownerId?: string;
+  attributes?: StringMap;
+  [key: string]: unknown;
+};
+
 export interface AutorixContext {
   scope?: {
     type: ScopeType;
@@ -35,14 +44,7 @@ export interface AutorixContext {
     attributes?: StringMap;
     [key: string]: unknown;
   };
-  resource?: {
-    type?: string;
-    id?: string;
-    tenantId?: string;
-    ownerId?: string;
-    attributes?: StringMap;
-    [key: string]: unknown;
-  };
+  resource?: AutorixResource;
   request?: {
     method?: string;
     path?: string;

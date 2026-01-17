@@ -12,6 +12,9 @@ import type { AutorixContext } from "@autorix/core";
 import type { PolicyProvider } from "@autorix/storage";
 import { AUTORIX_ACTIONS_KEY, AUTORIX_OPTIONS, AUTORIX_POLICY_PROVIDER } from "./autorix.constants";
 import type { AutorixNestjsOptions, PrincipalResolverResult } from "./autorix.interfaces";
+import { AUTORIX_RESOURCE_KEY } from "./autorix.constants";
+import type { AutorixResourceMeta, AutorixExecutionCtx } from "./autorix.interfaces";
+
 
 function getReq(ctx: ExecutionContext): any {
   const http = ctx.switchToHttp();
@@ -77,6 +80,11 @@ export class AutorixGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    const resourceMeta = this.reflector.getAllAndOverride<AutorixResourceMeta>(AUTORIX_RESOURCE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
     if (!actions || actions.length === 0) return true;
 
     const scope = await (this.options.scopeResolver?.(context) ?? defaultScopeResolver(context));
@@ -95,7 +103,7 @@ export class AutorixGuard implements CanActivate {
       undefined;
 
     const ctx =
-      (await this.options.contextResolver?.(context, scope, principal)) ??
+      (await this.options.contextResolver?.(context, scope, principal, resource)) ??
       defaultContextResolver(context, scope, principal, resource);
 
     const policies = await this.policyProvider.getPolicies({
