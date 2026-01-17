@@ -12,6 +12,10 @@ export function evaluate(input: EvaluateInput): Decision {
   const matchedAllow: string[] = [];
   const matchedDeny: string[] = [];
 
+  if (!policy) {
+    return { allowed: false, reason: "DEFAULT_DENY", matchedStatements: [] };
+  }
+
   const statements = policy.Statement ?? [];
   for (let i = 0; i < statements.length; i++) {
     const stmt = statements[i];

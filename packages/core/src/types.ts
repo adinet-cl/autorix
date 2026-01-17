@@ -7,7 +7,6 @@ export type ConditionOperator = 'StringEquals' | 'StringLike' | 'NumericEquals' 
 export type ConditionBlock = Partial<Record<ConditionOperator, Record<string, unknown>>>;
 
 export interface Statement {
-  /** Optional statement id for debugging/auditing */
   Sid?: string;
   Effect: Effect;
   Action: string | string[];
@@ -68,6 +67,5 @@ export type DecisionReason = 'EXPLICIT_DENY' | 'EXPLICIT_ALLOW' | 'DEFAULT_DENY'
 export interface Decision {
   allowed: boolean;
   reason: DecisionReason;
-  /** Sids (or generated indexes) of statements that matched (action+resource+condition) */
   matchedStatements: string[];
 }
