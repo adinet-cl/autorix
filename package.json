@@ -1,15 +1,9 @@
 {
-  "name": "@adinet/autorix-root",
+  "name": "autorix",
   "version": "0.1.0",
   "private": true,
   "description": "Monorepo root for Autorix packages",
   "packageManager": "pnpm@10.10.0",
-  "workspaces": [
-    "packages/autorix",
-    "packages/autorix-nestjs",
-    "packages/autorix-typeorm-adapter",
-    "packages/autorix-prisma-adapter"
-  ],
   "scripts": {
     "co": "sui-mono commit",
     "build": "pnpm -r run build",
@@ -19,14 +13,11 @@
     "clean": "pnpm -r run clean"
   },
   "keywords": [],
-  "author": "",
+  "author": "Sergio Galaz <sergiogalaz60@gmail.com>",
   "license": "MIT",
-  "dependencies": {
-    "class-validator": "^0.14.2",
-    "lodash": "^4.17.21"
-  },
   "devDependencies": {
     "@s-ui/mono": "^2.45.0",
+    "@types/node": "^25.0.9",
     "eslint": "^9.26.0",
     "prettier": "^3.5.3",
     "tsup": "^8.4.0",
