@@ -9,7 +9,8 @@ function getLeft(ctx: AutorixContext, key: string): unknown {
       principal: ctx.principal,
       resource: ctx.resource,
       request: ctx.request,
-      context: ctx.context,
+      scope: ctx.scope,
+      context: { ...ctx.context, scope: ctx.context?.scope ?? ctx.scope },
     },
     key
   );

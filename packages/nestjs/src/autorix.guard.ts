@@ -57,7 +57,10 @@ function defaultContextResolver(
       path: req?.url ?? req?.originalUrl,
     },
     scope: scope ? { type: scope.type, id: scope.id } : undefined,
-  } as any;
+    context: {
+      scope: scope ? { type: scope.type, id: scope.id } : undefined,
+    },
+  };
 }
 
 @Injectable()

@@ -14,6 +14,7 @@ export function resolveValue(value: unknown, ctx: AutorixContext): unknown {
     principal: ctx.principal,
     resource: ctx.resource,
     request: ctx.request,
-    context: ctx.context,
+    scope: ctx.scope,
+    context: { ...ctx.context, scope: ctx.context?.scope ?? ctx.scope },
   }, path);
 }

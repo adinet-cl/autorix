@@ -22,6 +22,11 @@ export interface PolicyDocument {
 export type ScopeType = 'GLOBAL' | 'TENANT' | 'LEGAL_ENTITY' | 'WORKSPACE' | 'APP' | string;
 
 export interface AutorixContext {
+  scope?: {
+    type: ScopeType;
+    id?: string;
+  };
+
   principal: {
     id: string;
     tenantId?: string;
