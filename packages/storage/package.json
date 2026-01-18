@@ -18,12 +18,15 @@
     "dist"
   ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "test": "vitest -c ../../vitest.config.ts run",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@autorix/core": "workspace:*"
+    "@autorix/core": "^0.1.0"
   }
 }

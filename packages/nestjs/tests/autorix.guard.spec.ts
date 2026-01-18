@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { describe, it, expect } from "vitest";
 import { Reflector } from "@nestjs/core";
 import { AutorixGuard } from "../src/autorix.guard";
-import { Policy } from "../src/autorix.decorator";
+import { Policy } from "../src/autorix.policy.decorator";
 import { MemoryPolicyProvider } from "@autorix/storage";
 import type { PolicyDocument } from "@autorix/core";
 
