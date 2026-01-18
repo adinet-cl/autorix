@@ -1,0 +1,63 @@
+{
+  "name": "@autorix/express",
+  "version": "0.1.0",
+  "description": "Express.js integration for Autorix policy-based authorization (RBAC + ABAC)",
+  "keywords": [
+    "authorization",
+    "rbac",
+    "abac",
+    "iam",
+    "policy",
+    "express",
+    "autorix"
+  ],
+  "license": "MIT",
+  "author": "Chechooxd <sergiogalaz60@gmail.com>",
+  "homepage": "https://github.com/chechooxd/autorix",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chechooxd/autorix.git",
+    "directory": "packages/autorix-express"
+  },
+  "bugs": {
+    "url": "https://github.com/chechooxd/autorix/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest -c ../../vitest.config.ts run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@autorix/core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/supertest": "^6.0.3",
+    "express": "^5.2.1",
+    "supertest": "^7.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
