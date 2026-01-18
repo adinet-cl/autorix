@@ -13,7 +13,7 @@ import type { PolicyProvider } from "@autorix/storage";
 import { AUTORIX_ACTIONS_KEY, AUTORIX_OPTIONS, AUTORIX_POLICY_PROVIDER } from "./autorix.constants";
 import type { AutorixNestjsOptions, PrincipalResolverResult } from "./autorix.interfaces";
 import { AUTORIX_RESOURCE_KEY } from "./autorix.constants";
-import type { AutorixResourceMeta, AutorixExecutionCtx } from "./autorix.interfaces";
+import type { AutorixResourceMeta } from "./autorix.interfaces";
 
 
 function getReq(ctx: ExecutionContext): any {
@@ -66,13 +66,6 @@ function defaultContextResolver(
   };
 }
 
-// imports omitidos para brevedad (los mismos que ya usas)
-
-function inferResourceTypeFromAction(action: string): string | undefined {
-  const parts = action.split(":");
-  return parts.length >= 2 ? parts[1] : undefined;
-}
-
 function buildResourceString(type?: string, id?: string) {
   if (!type) return "*";
   return `${type}/${id ?? "*"}`;
@@ -97,14 +90,11 @@ export class AutorixGuard implements CanActivate {
     const principal =
       await (this.options.principalResolver?.(context) ?? defaultPrincipalResolver(context));
 
-    if (!principal.principalId) throw new ForbiddenException();
+    if (!principal.principalId) throw new UnauthorizedException();
 
     const req = getReq(context);
     const execCtx = { req, context };
 
-    // ----------------------
-    // Resource resolution
-    // ----------------------
     const meta = this.reflector.getAllAndOverride<AutorixResourceMeta>(
       AUTORIX_RESOURCE_KEY,
       [context.getHandler(), context.getClass()]
@@ -115,14 +105,12 @@ export class AutorixGuard implements CanActivate {
     try {
       if (meta) {
         if (meta.mode === "param") {
-          // Nivel 1
           const id = req?.params?.[meta.param ?? "id"];
           resource = {
             type: meta.type,
             id: id != null ? String(id) : undefined,
           };
         } else {
-          // Nivel 2 (resolver)
           const id = meta.id ? await meta.id(execCtx) : undefined;
           const attrs = meta.attributes ? await meta.attributes(execCtx) : undefined;
           const tenantId = meta.tenantId ? await meta.tenantId(execCtx) : undefined;
@@ -137,7 +125,6 @@ export class AutorixGuard implements CanActivate {
       }
 
     } catch {
-      // Fail closed
       throw new ForbiddenException("Resource resolution failed");
     }
 

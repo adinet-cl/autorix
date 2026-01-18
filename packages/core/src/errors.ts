@@ -9,3 +9,14 @@ export class AutorixForbiddenError extends Error {
     this.decision = decision;
   }
 }
+
+export class AutorixPolicyValidationError extends Error {
+  public readonly errors: string[];
+
+  constructor(message: string, errors: string[]) {
+    super(message);
+    this.name = "AutorixPolicyValidationError";
+    this.errors = errors;
+  }
+}
+

@@ -2,6 +2,8 @@ import type { Decision, EvaluateInput, Statement } from './types';
 import { matchAction } from './matchers/action';
 import { matchResource } from './matchers/resource';
 import { evaluateConditions } from './conditions/evaluate';
+import { assertValidPolicyDocument } from './validatePolicy';
+
 
 function statementId(stmt: Statement, index: number): string {
   return stmt.Sid ?? `stmt#${index}`;
@@ -14,6 +16,10 @@ export function evaluate(input: EvaluateInput): Decision {
 
   if (!policy) {
     return { allowed: false, reason: "DEFAULT_DENY", matchedStatements: [] };
+  }
+
+  if (input.validate !== false) {
+    assertValidPolicyDocument(policy);
   }
 
   const statements = policy.Statement ?? [];

@@ -67,6 +67,7 @@ export interface EvaluateInput {
   resource: string;
   policy: PolicyDocument;
   ctx: AutorixContext;
+  validate?: boolean;
 }
 
 export type DecisionReason = 'EXPLICIT_DENY' | 'EXPLICIT_ALLOW' | 'DEFAULT_DENY';

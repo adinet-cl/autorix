@@ -189,4 +189,119 @@ describe('autorix/core evaluate', () => {
 
     expect(bad.allowed).toBe(false);
   });
+
+    it('supports Action/Resource as arrays', () => {
+    const policy: PolicyDocument = {
+      Statement: [
+        {
+          Sid: 'AllowInvoiceOps',
+          Effect: 'Allow',
+          Action: ['erp:invoice:create', 'erp:invoice:update'],
+          Resource: ['invoice/*', 'invoice/123'],
+        },
+      ],
+    };
+
+    const res = evaluate({
+      action: 'erp:invoice:update',
+      resource: 'invoice/999',
+      policy,
+      ctx: baseCtx,
+    });
+
+    expect(res.allowed).toBe(true);
+    expect(res.reason).toBe('EXPLICIT_ALLOW');
+  });
+
+  it('evaluates StringLike wildcard patterns', () => {
+    const policy: PolicyDocument = {
+      Statement: [
+        {
+          Sid: 'AllowOwnerWildcard',
+          Effect: 'Allow',
+          Action: 'erp:invoice:create',
+          Resource: 'invoice/*',
+          Condition: {
+            StringLike: {
+              'resource.ownerId': 'u*',
+            },
+          },
+        },
+      ],
+    };
+
+    const res = evaluate({
+      action: 'erp:invoice:create',
+      resource: 'invoice/1',
+      policy,
+      ctx: baseCtx,
+    });
+
+    expect(res.allowed).toBe(true);
+  });
+
+  it('does not throw when a variable path is missing (it just does not match)', () => {
+    const policy: PolicyDocument = {
+      Statement: [
+        {
+          Sid: 'BadVarShouldNotMatch',
+          Effect: 'Allow',
+          Action: 'erp:invoice:create',
+          Resource: 'invoice/*',
+          Condition: {
+            StringEquals: {
+              'resource.tenantId': '${principal.nope}',
+            },
+          },
+        },
+      ],
+    };
+
+    const res = evaluate({
+      action: 'erp:invoice:create',
+      resource: 'invoice/1',
+      policy,
+      ctx: baseCtx,
+    });
+
+    expect(res.allowed).toBe(false);
+    expect(res.reason).toBe('DEFAULT_DENY');
+  });
+
+  it('throws a clear error when policy schema is invalid (validation on by default)', () => {
+    const badPolicy: any = {
+      Statement: [
+        {
+          Effect: 'ALLOW', // invalid
+          Action: [],
+          Resource: 123,
+        },
+      ],
+    };
+
+    expect(() =>
+      evaluate({
+        action: 'x:y:z',
+        resource: 'r/1',
+        policy: badPolicy,
+        ctx: baseCtx,
+      })
+    ).toThrow();
+  });
+
+  it('can skip validation if you want (validate: false)', () => {
+    const badPolicy: any = { Statement: [{ Effect: 'ALLOW', Action: [], Resource: 123 }] };
+
+    const res = evaluate({
+      action: 'x:y:z',
+      resource: 'r/1',
+      policy: badPolicy,
+      ctx: baseCtx,
+      validate: false,
+    });
+
+    // con policy malo, igual debería caer a default deny sin explotar
+    expect(res.allowed).toBe(false);
+  });
+
 });
