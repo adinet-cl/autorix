@@ -526,7 +526,7 @@ See [LICENSE](./LICENSE) for details.
 
 ## 👥 Authors
 
-- **Sergio Galaz** - [@sergiogalaz](https://github.com/sergiogalaz) - [sergiogalaz60@gmail.com](mailto:sergiogalaz60@gmail.com)
+- **Sergio Galaz** - [@chechooxd](https://github.com/chechooxd) - [sergiogalaz60@gmail.com](mailto:sergiogalaz60@gmail.com)
 
 ## 🙏 Acknowledgments
 
@@ -536,14 +536,14 @@ See [LICENSE](./LICENSE) for details.
 ## 📞 Support
 
 - 📧 Email: sergiogalaz60@gmail.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/autorix/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/autorix/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/chechooxd/autorix/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/chechooxd/autorix/discussions)
 
 ## 🔗 Links
 
 - [Documentation](https://autorix.dev)
 - [NPM Organization](https://www.npmjs.com/org/autorix)
-- [GitHub Repository](https://github.com/yourusername/autorix)
+- [GitHub Repository](https://github.com/chechooxd/autorix)
 
 ---
 
