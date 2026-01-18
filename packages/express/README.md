@@ -53,17 +53,40 @@ const enforcer = {
       return { allowed: false, reason: 'Unauthenticated' };
     }
 
+    // Build scope for policy lookup
+    const scope = { 
+      type: 'TENANT', 
+      id: input.context.tenantId || 'default' 
+    };
+
+    // Fetch policies from storage
     const policies = await policyProvider.getPolicies({
-      scope: input.context.tenantId || 'default',
-      principal: input.context.principal,
+      scope,
+      principal: { type: 'USER', id: input.context.principal.id },  // ← Must include type
       roleIds: input.context.principal?.roles,
     });
 
+    // Transform Express context to Core context format
+    const coreContext = {
+      scope,
+      principal: input.context.principal,
+      resource: input.context.resource,  // Resource object for conditions
+      request: {
+        ip: input.context.ip,
+        headers: { 'user-agent': input.context.userAgent },
+      },
+      context: {
+        scope,
+        ...input.context.attributes,
+      },
+    };
+
+    // Evaluate all policies
     const result = evaluateAll({
       policies: policies.map(p => p.document),
       action: input.action,
       resource: input.resource,  // ← String for matching (e.g., 'post/123')
-      ctx: input.context,        // ← Contains resource object in ctx.resource
+      ctx: coreContext,
     });
 
     return { allowed: result.allowed, reason: result.reason };
@@ -128,8 +151,8 @@ type AutorixExpressOptions = {
   enforcer: {
     can: (input: {
       action: string;
-      context: AutorixRequestContext;
-      resource?: unknown;
+      resource: string;  // Resource string for matching (e.g., 'post/123')
+      context: AutorixRequestContext;  // Contains resource object in context.resource
     }) => Promise<{ allowed: boolean; reason?: string }>;
   };
   getPrincipal: (req: Request) => Principal | Promise<Principal>;
@@ -189,10 +212,14 @@ authorize({
 #### Resource Specification
 
 ```typescript
-// Static resource
+// Simple action - resource auto-inferred from action
+// 'user:list' → resource string becomes 'user/*'
+authorize('user:list')
+
+// Static resource string
 authorize({ action: 'post:read', resource: 'post/123' })
 
-// Resource from route params
+// Resource from route params with dynamic loading
 authorize({
   action: 'post:delete',
   resource: {
@@ -202,9 +229,12 @@ authorize({
   }
 })
 
-// Pre-loaded resource
+// Pre-loaded static resource object
 authorize({
   action: 'user:update',
+  resource: { type: 'user', id: '123', ownerId: 'u1' }
+})
+```
   resource: { type: 'user', id: '123', data: { ownerId: 'u1' } }
 })
 ```
@@ -217,6 +247,7 @@ Autorix uses **two separate concepts** for resources:
    - Format: `type/id` or `type/*`
    - Used in policy `Resource` field
    - Example: `'post/123'`, `'document/*'`
+   - **Auto-inferred**: If not specified, extracted from action (e.g., `'user:list'` → `'user/*'`)
 
 2. **Resource Object** (for attribute-based conditions)
    - Contains resource properties/attributes
@@ -247,6 +278,58 @@ authorize({
     loader: async (id) => {
       const post = await db.posts.findById(id);
       return { authorId: post.authorId };  // → Object for conditions
+    }
+  }
+})
+
+// Result:
+// - Resource string: 'post/123' (for policy Resource matching)
+// - Resource object: { type: 'post', id: '123', authorId: 'u1' } (for Condition checks)
+```
+
+### ⚠️ Important Notes
+
+**1. PolicyProvider Principal Format**
+
+When calling `policyProvider.getPolicies()`, the principal **must include a `type`**:
+
+```typescript
+// ✅ Correct
+principal: { type: 'USER', id: 'user-123' }
+
+// ❌ Wrong - will not find policies
+principal: { id: 'user-123' }
+```
+
+**2. Context Transformation**
+
+Express context differs from Core context. Always transform when calling `evaluateAll()`:
+
+```typescript
+// Express context
+const expressContext = {
+  principal: { id: 'u1', roles: ['admin'] },
+  tenantId: 't1',
+  ip: '192.168.1.1'
+};
+
+// Core context (required by evaluateAll)
+const coreContext = {
+  scope: { type: 'TENANT', id: expressContext.tenantId },
+  principal: expressContext.principal,
+  resource: expressContext.resource,
+  request: { ip: expressContext.ip }
+};
+```
+
+**3. Resource Auto-Inference**
+
+When no resource is specified, it's inferred from the action:
+- `'user:list'` → `'user/*'`
+- `'post:delete'` → `'post/*'`
+- `'document:read'` → `'document/*'`
+
+This works well with wildcard policies but requires your actions follow the `<resource>:<action>` pattern.
     }
   }
 })
