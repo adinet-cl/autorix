@@ -11,22 +11,22 @@ export type PrincipalResolverResult = {
 
 export interface AutorixNestjsOptions {
   /**
-   * Determina el scope (tenant/workspace/etc) para cargar policies.
-   * Por defecto: TENANT leyendo req.tenantId o req.user.tenantId (si existe).
+   * Determines the scope (tenant/workspace/etc) to load policies.
+   * Default: TENANT reading req.tenantId or req.user.tenantId (if exists).
    */
   scopeResolver?: (ctx: ExecutionContext) => Promise<AutorixScope> | AutorixScope;
 
   /**
-   * Determina quién es el principal (user) + roles/grupos.
-   * Por defecto: usa req.user.id / req.user.roles / req.user.groups si existen.
+   * Determines who is the principal (user) + roles/groups.
+   * Default: uses req.user.id / req.user.roles / req.user.groups if they exist.
    */
   principalResolver?: (
     ctx: ExecutionContext
   ) => Promise<PrincipalResolverResult> | PrincipalResolverResult;
 
   /**
-   * Construye el AutorixContext canónico para ABAC.
-   * Por defecto: arma principal + request(method/path) y deja resource vacío.
+   * Builds the canonical AutorixContext for ABAC.
+   * Default: builds principal + request(method/path) and leaves resource empty.
    */
   contextResolver?: (
     ctx: ExecutionContext,
@@ -36,15 +36,15 @@ export interface AutorixNestjsOptions {
   ) => Promise<AutorixContext> | AutorixContext;
 
   /**
-   * Resuelve el resource (opcional) para ABAC.
-   * Útil para "resource.ownerId", "resource.tenantId", etc.
+   * Resolves the resource (optional) for ABAC.
+   * Useful for "resource.ownerId", "resource.tenantId", etc.
    */
   resourceResolver?: (
     ctx: ExecutionContext
   ) => Promise<Record<string, any> | undefined> | Record<string, any> | undefined;
 
   /**
-   * Qué hacer si falta req.user / principalId.
+   * What to do if req.user / principalId is missing.
    */
   onMissingPrincipal?: "deny" | "throw";
 }
@@ -53,7 +53,7 @@ export type AutorixModuleAsyncOptions = {
   imports?: any[];
   inject?: any[];
   useFactory: (...args: any[]) => Promise<AutorixNestjsOptions> | AutorixNestjsOptions;
-  policyProvider: PolicyProvider; // para MVP: directo
+  policyProvider: PolicyProvider;
 };
 
 export type AutorixExecutionCtx = {

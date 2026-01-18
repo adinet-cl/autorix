@@ -300,7 +300,7 @@ describe('autorix/core evaluate', () => {
       validate: false,
     });
 
-    // con policy malo, igual debería caer a default deny sin explotar
+    // with bad policy, should still fall to default deny without crashing
     expect(res.allowed).toBe(false);
   });
 

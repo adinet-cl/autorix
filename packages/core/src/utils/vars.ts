@@ -9,7 +9,7 @@ export function resolveValue(value: unknown, ctx: AutorixContext): unknown {
   const m = trimmed.match(VAR_RE);
   if (!m) return value;
   const path = m[1].trim();
-  // allow paths like principal.id, resource.ownerId, context.scope.id, request.method
+  
   return getPath({
     principal: ctx.principal,
     resource: ctx.resource,

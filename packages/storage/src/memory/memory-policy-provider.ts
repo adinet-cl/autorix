@@ -67,7 +67,7 @@ export class MemoryPolicyProvider implements PolicyProvider {
     for (const policyId of matchedPolicyIds) {
       const rec = this.policies.get(policyId);
       if (!rec) continue;
-      // Asegura scope igual por si alguien attachó mal
+      // Ensures same scope in case someone attached incorrectly
       if (!sameScope(rec.scope, input.scope)) continue;
 
       result.push({ id: rec.id, document: rec.document });
