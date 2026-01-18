@@ -46,7 +46,7 @@ const policyProvider = new MemoryPolicyProvider();
 
 // Create enforcer
 const enforcer = {
-  can: async (input: { action: string; context: any; resource?: unknown }) => {
+  can: async (input: { action: string; resource: string; context: any }) => {
     // ✅ IMPORTANT: If your app allows unauthenticated requests, guard here
     // to avoid storage/providers crashing when principal is null.
     if (!input.context?.principal) {
@@ -62,8 +62,8 @@ const enforcer = {
     const result = evaluateAll({
       policies: policies.map(p => p.document),
       action: input.action,
-      resource: input.resource,
-      context: input.context,
+      resource: input.resource,  // ← String for matching (e.g., 'post/123')
+      ctx: input.context,        // ← Contains resource object in ctx.resource
     });
 
     return { allowed: result.allowed, reason: result.reason };
@@ -209,6 +209,49 @@ authorize({
 })
 ```
 
+## 🔑 Understanding Resources
+
+Autorix uses **two separate concepts** for resources:
+
+1. **Resource String** (for pattern matching in policies)
+   - Format: `type/id` or `type/*`
+   - Used in policy `Resource` field
+   - Example: `'post/123'`, `'document/*'`
+
+2. **Resource Object** (for attribute-based conditions)
+   - Contains resource properties/attributes
+   - Used in policy `Condition` blocks
+   - Example: `{ type: 'post', id: '123', authorId: 'u1' }`
+
+**How they work together:**
+
+```typescript
+// Policy matches by string pattern
+Statement: [{
+  Effect: 'Allow',
+  Action: ['post:delete'],
+  Resource: 'post/*',  // ← Matches 'post/123'
+  Condition: {
+    StringEquals: {
+      'resource.authorId': '${principal.id}'  // ← Uses resource object
+    }
+  }
+}]
+
+// Middleware automatically handles both
+authorize({
+  action: 'post:delete',
+  resource: {
+    type: 'post',
+    idFrom: (req) => req.params.id,  // → Builds string: 'post/123'
+    loader: async (id) => {
+      const post = await db.posts.findById(id);
+      return { authorId: post.authorId };  // → Object for conditions
+    }
+  }
+})
+```
+
 ## 🎯 Usage Examples
 
 ### Role-Based Access Control (RBAC)
@@ -253,16 +296,16 @@ app.get('/admin/settings',
 ### Attribute-Based Access Control (ABAC)
 
 ```typescript
-// Policy with conditions
+// Policy with conditions - checks resource attributes
 await provider.setPolicy('owner-only', {
   Version: '2024-01-01',
   Statement: [{
     Effect: 'Allow',
     Action: ['post:update', 'post:delete'],
-    Resource: ['post/*'],
+    Resource: ['post/*'],  // ← Matches 'post/123' string pattern
     Condition: {
       StringEquals: {
-        'principal.id': '${resource.ownerId}'
+        'resource.authorId': '${principal.id}'  // ← Checks resource object property
       }
     }
   }]
@@ -277,12 +320,16 @@ app.put('/posts/:id',
       idFrom: (req) => req.params.id,
       loader: async (id) => {
         const post = await db.posts.findById(id);
-        return { ...post, ownerId: post.userId };
+        // Return object with properties for conditions
+        return { 
+          authorId: post.authorId,  // ← This becomes resource.authorId in conditions
+          status: post.status 
+        };
       }
     }
   }),
   (req, res) => {
-    // Only post owner can update
+    // Only post author can update
     res.json({ message: 'Post updated!' });
   }
 );

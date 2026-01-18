@@ -22,14 +22,31 @@ export function autorixExpress(opts: AutorixExpressOptions) {
 
       req.autorix = {
         context,
-        can: async (action, resource, ctxExtra) => {
+        can: async (action, resourceObj, ctxExtra) => {
+          // Build resource string for matching (e.g., 'post/123')
+          let resourceString = '*';
+          if (typeof resourceObj === 'object' && resourceObj && 'type' in resourceObj) {
+            const resType = (resourceObj as any).type;
+            const resId = (resourceObj as any).id;
+            resourceString = resId ? `${resType}/${resId}` : `${resType}/*`;
+          } else if (typeof resourceObj === 'string') {
+            resourceString = resourceObj;
+          } else if (resourceObj === undefined) {
+            // Infer resource from action (e.g., 'user:list' -> 'user/*')
+            const parts = action.split(':');
+            if (parts.length > 1) {
+              resourceString = `${parts[0]}/*`;
+            }
+          }
+
           const decision = await opts.enforcer.can({
             action,
+            resource: resourceString,
             context: {
               ...context,
+              resource: resourceObj,  // Object goes in context for conditions
               attributes: { ...(context.attributes ?? {}), ...(ctxExtra ?? {}) },
             },
-            resource,
           });
 
           opts.onDecision?.({ ...decision, action }, req);

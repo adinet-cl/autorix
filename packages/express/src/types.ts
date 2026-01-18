@@ -17,19 +17,19 @@ export type AutorixRequestContext = {
 };
 
 export type ResourceSpec =
-  | string
-  | { type: string; id?: string; data?: unknown }
+  | string  // Simple resource string: 'post' → builds 'post/*'
+  | { type: string; id?: string; [key: string]: unknown }  // Static resource object
   | {
       type: string;
       idFrom: (req: Request) => string;
-      loader: (id: string, req: Request) => Promise<unknown>;
+      loader: (id: string, req: Request) => Promise<Record<string, unknown>>;  // Returns resource attributes
     };
 
 export type GetContextFn = (req: Request) => Partial<AutorixRequestContext> | Promise<Partial<AutorixRequestContext>>;
 
 export type AutorixExpressOptions = {
   enforcer: {
-    can: (input: { action: string; context: AutorixRequestContext; resource?: unknown }) => Promise<{ allowed: boolean; reason?: string }>;
+    can: (input: { action: string; resource: string; context: AutorixRequestContext }) => Promise<{ allowed: boolean; reason?: string }>;
   };
   getPrincipal: (req: Request) => Principal | Promise<Principal>;
   getTenant?: (req: Request) => string | null | Promise<string | null>;
