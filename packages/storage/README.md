@@ -1,15 +1,16 @@
 # @autorix/storage
 
-**Policy Storage Providers for Autorix** - Flexible storage adapters for managing and retrieving authorization policies.
+**Policy Storage Interface for Autorix** - Extensible storage abstraction for managing and retrieving authorization policies.
 
 ## 📋 Overview
 
-`@autorix/storage` provides storage abstractions and implementations for managing Autorix policies. It defines the `PolicyProvider` interface and includes built-in providers for different storage backends.
+`@autorix/storage` provides the core `PolicyProvider` interface and types for managing Autorix policies. It defines the contract that storage adapters must implement, allowing you to use any database or storage backend.
 
 ## ✨ Features
 
-- 🔌 **Provider Interface** - Extensible abstraction for policy storage
-- 💾 **Memory Provider** - In-memory storage for development and testing
+- 🔌 **Provider Interface** - Clean abstraction for policy storage
+- 💾 **Memory Provider** - Built-in in-memory storage for development and testing
+- 🗄️ **Database Adapters** - Official adapters for PostgreSQL, MongoDB, and Prisma (separate packages)
 - 🎯 **Scope-aware** - Multi-tenant and hierarchical scope support
 - 👥 **Principal Types** - Support for users, roles, and groups
 - 🔗 **Policy Attachments** - Flexible policy-to-principal binding
@@ -18,21 +19,32 @@
 
 ## 📦 Installation
 
-```bash
-npm install @autorix/storage @autorix/core
-```
+### Core Package (includes MemoryPolicyProvider)
 
 ```bash
+npm install @autorix/storage @autorix/core
+# or
 pnpm add @autorix/storage @autorix/core
 ```
 
+### Database Adapters (Optional)
+
+Choose the adapter for your database:
+
 ```bash
-yarn add @autorix/storage @autorix/core
+# PostgreSQL
+npm install @autorix/storage-postgres pg
+
+# MongoDB
+npm install @autorix/storage-mongodb mongodb
+
+# Prisma (works with PostgreSQL, MySQL, SQLite, etc.)
+npm install @autorix/storage-prisma @prisma/client
 ```
 
 ## 🚀 Quick Start
 
-### Using Memory Provider
+### Using Memory Provider (Development/Testing)
 
 ```typescript
 import { MemoryPolicyProvider } from '@autorix/storage';
@@ -46,11 +58,11 @@ provider.addPolicy({
   id: 'policy-1',
   scope: { type: 'TENANT', id: 'tenant-123' },
   document: {
-    Statement: [
+    statements: [
       {
-        Effect: 'Allow',
-        Action: 'document:*',
-        Resource: 'document/*',
+        effect: 'allow',
+        actions: ['document:*'],
+        resources: ['document/*'],
       },
     ],
   },
@@ -73,6 +85,37 @@ console.log(policies);
 // [{ id: 'policy-1', document: { ... } }]
 ```
 
+### Using Database Adapters (Production)
+
+For production environments, use one of the database adapters:
+
+```typescript
+// PostgreSQL
+import { PostgresPolicyProvider } from '@autorix/storage-postgres';
+import { Pool } from 'pg';
+
+const pool = new Pool({ /* connection config */ });
+const provider = new PostgresPolicyProvider(pool);
+await provider.initSchema(); // Initialize tables
+
+// MongoDB
+import { MongoDBPolicyProvider } from '@autorix/storage-mongodb';
+import { MongoClient } from 'mongodb';
+
+const client = new MongoClient('mongodb://localhost:27017');
+await client.connect();
+const provider = new MongoDBPolicyProvider(client.db('myapp'));
+await provider.createIndexes(); // Create indexes
+
+// Prisma
+import { PrismaPolicyProvider } from '@autorix/storage-prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+const provider = new PrismaPolicyProvider(prisma);
+// Run: npx prisma migrate dev
+```
+
 ## 📚 Core Concepts
 
 ### Policy Provider Interface
@@ -84,6 +127,8 @@ interface PolicyProvider {
   getPolicies(input: GetPoliciesInput): Promise<PolicySource[]>;
 }
 ```
+
+All database adapters implement this interface, allowing you to switch between storage backends without changing your application code.
 
 ### Scope
 
@@ -199,7 +244,138 @@ const policies = await provider.getPolicies({
 });
 ```
 
-## 🎯 Advanced Usage
+## 🎯 Available Storage Adapters
+
+### Built-in: Memory Provider
+
+Perfect for development, testing, and small applications. Included in this package.
+
+```typescript
+import { MemoryPolicyProvider } from '@autorix/storage';
+
+const provider = new MemoryPolicyProvider();
+```
+
+**Use cases:** Development, testing, prototyping, serverless functions with ephemeral state
+
+### PostgreSQL Adapter
+
+Production-ready adapter for PostgreSQL databases.
+
+```typescript
+import { Pool } from 'pg';
+import { PostgresPolicyProvider } from '@autorix/storage-postgres';
+
+const pool = new Pool({ /* config */ });
+const provider = new PostgresPolicyProvider(pool);
+```
+
+📦 **Package:** `@autorix/storage-postgres`  
+📖 **[Full Documentation](https://www.npmjs.com/package/@autorix/storage-postgres)**
+
+### MongoDB Adapter
+
+NoSQL adapter for MongoDB databases.
+
+```typescript
+import { MongoClient } from 'mongodb';
+import { MongoDBPolicyProvider } from '@autorix/storage-mongodb';
+
+const client = new MongoClient('mongodb://localhost:27017');
+await client.connect();
+const db = client.db('myapp');
+const provider = new MongoDBPolicyProvider(db);
+```
+
+📦 **Package:** `@autorix/storage-mongodb`  
+📖 **[Full Documentation](https://www.npmjs.com/package/@autorix/storage-mongodb)**
+
+### Prisma Adapter
+
+Type-safe ORM adapter that works with PostgreSQL, MySQL, SQLite, SQL Server, MongoDB, and CockroachDB.
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+import { PrismaPolicyProvider } from '@autorix/storage-prisma';
+
+const prisma = new PrismaClient();
+const provider = new PrismaPolicyProvider(prisma);
+```
+
+📦 **Package:** `@autorix/storage-prisma`  
+📖 **[Full Documentation](https://www.npmjs.com/package/@autorix/storage-prisma)**
+
+### Custom Adapters
+
+You can create your own adapter for any database by implementing the `PolicyProvider` interface:
+
+```typescript
+import type { PolicyProvider, GetPoliciesInput, PolicySource } from '@autorix/storage';
+
+class MyCustomProvider implements PolicyProvider {
+  async getPolicies(input: GetPoliciesInput): Promise<PolicySource[]> {
+    // Your implementation here
+    // Query your database and return policies
+  }
+}
+```
+
+## 🔧 Memory Provider API
+
+The built-in `MemoryPolicyProvider` includes additional methods for managing policies:
+
+### Constructor
+
+```typescript
+const provider = new MemoryPolicyProvider();
+```
+
+### `addPolicy(policy: PolicyRecord): this`
+
+Adds a policy to the provider.
+
+```typescript
+provider.addPolicy({
+  id: 'read-policy',
+  scope: { type: 'TENANT', id: 'tenant-123' },
+  document: {
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: ['document:read', 'document:list'],
+        Resource: '*',
+      },
+    ],
+  },
+});
+```
+
+### `attachPolicy(params): this`
+
+Attaches a policy to a principal within a scope.
+
+```typescript
+provider.attachPolicy({
+  policyId: 'read-policy',
+  scope: { type: 'TENANT', id: 'tenant-123' },
+  principal: { type: 'USER', id: 'user-456' },
+});
+```
+
+### `getPolicies(input: GetPoliciesInput): Promise<PolicySource[]>`
+
+Retrieves all policies applicable to a principal.
+
+```typescript
+const policies = await provider.getPolicies({
+  scope: { type: 'TENANT', id: 'tenant-123' },
+  principal: { type: 'USER', id: 'user-456' },
+  roleIds: ['admin', 'editor'],
+  groupIds: ['engineering'],
+});
+```
+
+## 🎯 Usage Examples
 
 ### Role-based Policies
 

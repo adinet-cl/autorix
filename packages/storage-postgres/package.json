@@ -1,0 +1,49 @@
+{
+  "name": "@autorix/storage-postgres",
+  "version": "0.1.0",
+  "description": "PostgreSQL adapter for Autorix policy storage",
+  "keywords": [
+    "autorix",
+    "authorization",
+    "postgres",
+    "postgresql",
+    "storage",
+    "adapter"
+  ],
+  "author": "Adinet",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "License"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@autorix/core": "workspace:*",
+    "@autorix/storage": "workspace:*",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "peerDependencies": {
+    "@autorix/storage": "^0.1.0"
+  }
+}

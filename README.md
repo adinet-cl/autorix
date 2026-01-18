@@ -23,13 +23,28 @@ A powerful, flexible, and type-safe authorization framework that brings AWS IAM-
 
 ## 📦 Packages
 
-Autorix is organized as a monorepo with three main packages:
+Autorix is organized as a monorepo with modular packages:
+
+### Core Packages
 
 | Package | Description | Version |
 |---------|-------------|---------|
 | [@autorix/core](./packages/core) | Core policy evaluation engine | ![npm](https://img.shields.io/npm/v/@autorix/core) |
+| [@autorix/storage](./packages/storage) | Policy storage interface + MemoryProvider | ![npm](https://img.shields.io/npm/v/@autorix/storage) |
+| [@autorix/express](./packages/express) | Express.js middleware integration | ![npm](https://img.shields.io/npm/v/@autorix/express) |
 | [@autorix/nestjs](./packages/nestjs) | NestJS integration with decorators and guards | ![npm](https://img.shields.io/npm/v/@autorix/nestjs) |
-| [@autorix/storage](./packages/storage) | Policy storage providers and abstractions | ![npm](https://img.shields.io/npm/v/@autorix/storage) |
+
+### Storage Adapters
+
+Install only the adapter you need:
+
+| Adapter | Database | Package |
+|---------|----------|---------|
+| PostgreSQL | PostgreSQL | `@autorix/storage-postgres` |
+| MongoDB | MongoDB | `@autorix/storage-mongodb` |
+| Prisma | PostgreSQL, MySQL, SQLite, etc. | `@autorix/storage-prisma` |
+
+**Why separate packages?** Each adapter has its own database dependencies. This keeps your `node_modules` lean - you only install what you actually use.
 
 ## 🚀 Quick Start
 
