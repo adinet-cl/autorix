@@ -34,21 +34,47 @@ yarn add @autorix/express @autorix/core @autorix/storage
 
 ```typescript
 import express from 'express';
-import { autorixExpress, authorize } from '@autorix/express';
-import { Autorix } from '@autorix/core';
+import { autorixExpress, authorize, autorixErrorHandler } from '@autorix/express';
+import { evaluateAll } from '@autorix/core';
 import { MemoryPolicyProvider } from '@autorix/storage';
 
 const app = express();
+app.use(express.json());
 
-// Initialize Autorix
+// Initialize policy provider
 const policyProvider = new MemoryPolicyProvider();
-const autorix = new Autorix(policyProvider);
 
-// Add the Autorix middleware
+// Create enforcer
+const enforcer = {
+  can: async (input: { action: string; context: any; resource?: unknown }) => {
+    // ✅ IMPORTANT: If your app allows unauthenticated requests, guard here
+    // to avoid storage/providers crashing when principal is null.
+    if (!input.context?.principal) {
+      return { allowed: false, reason: 'Unauthenticated' };
+    }
+
+    const policies = await policyProvider.getPolicies({
+      scope: input.context.tenantId || 'default',
+      principal: input.context.principal,
+      roleIds: input.context.principal?.roles,
+    });
+
+    const result = evaluateAll({
+      policies: policies.map(p => p.document),
+      action: input.action,
+      resource: input.resource,
+      context: input.context,
+    });
+
+    return { allowed: result.allowed, reason: result.reason };
+  }
+};
+
+// Add the Autorix middleware (must be registered before routes)
 app.use(autorixExpress({
-  enforcer: autorix,
+  enforcer,
   getPrincipal: async (req) => {
-    // Extract user from your auth middleware
+    // Extract user from your auth middleware (e.g., JWT/Passport/session)
     return req.user ? { id: req.user.id, roles: req.user.roles } : null;
   },
   getTenant: async (req) => {
@@ -58,26 +84,33 @@ app.use(autorixExpress({
 }));
 
 // Protect routes with authorize middleware
-app.get('/admin/users',
-  authorize('user:list'),
+app.get(
+  '/admin/users',
+  authorize('user:list', { requireAuth: true }),
   (req, res) => {
     res.json({ message: 'Authorized!' });
   }
 );
 
-app.delete('/posts/:id',
+app.delete(
+  '/posts/:id',
   authorize({
     action: 'post:delete',
+    requireAuth: true,
     resource: {
       type: 'post',
       idFrom: (req) => req.params.id,
-      loader: async (id) => await db.posts.findById(id)
+      loader: async (id) => await db.posts.findById(id),
     }
   }),
   (req, res) => {
     res.json({ message: 'Post deleted!' });
   }
 );
+
+// ✅ IMPORTANT: Register Autorix error handler at the end
+// so authorization errors return clean HTTP responses (401/403) instead of stack traces.
+app.use(autorixErrorHandler());
 
 app.listen(3000);
 ```
@@ -359,30 +392,70 @@ app.use(autorixExpress({
 }));
 ```
 
+---
+
 ## 🔧 Error Handling
 
-The package provides custom error classes:
+`@autorix/express` provides an official error handler middleware to ensure authorization errors
+are returned as clean HTTP responses (`401`, `403`) instead of unhandled stack traces.
 
-```typescript
-import {
-  AutorixForbiddenError,
-  AutorixUnauthenticatedError,
-  AutorixMissingMiddlewareError
-} from '@autorix/express';
+### ✅ Recommended (default)
+
+```ts
+import { autorixErrorHandler } from '@autorix/express';
+
+// Register at the end (after routes)
+app.use(autorixErrorHandler());
+```
+
+This middleware automatically handles all `AutorixHttpError` instances and formats them as JSON responses.
+
+**Always register this middleware after all routes.**
+
+---
+
+### 🧩 Custom error handling (optional)
+
+If you want full control over the error response format or logging, you can implement
+your own handler using the exported error classes.
+
+```ts
+import { AutorixHttpError } from '@autorix/express';
 
 app.use((err, req, res, next) => {
-  if (err instanceof AutorixForbiddenError) {
-    return res.status(403).json({ error: 'Forbidden' });
+  if (err instanceof AutorixHttpError) {
+    return res.status(err.statusCode).json({
+      error: {
+        code: err.code,
+        message: err.message
+      }
+    });
   }
-  if (err instanceof AutorixUnauthenticatedError) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  if (err instanceof AutorixMissingMiddlewareError) {
-    return res.status(500).json({ error: 'Autorix middleware not configured' });
-  }
+
   next(err);
 });
 ```
+
+---
+
+### ⚠️ Important notes
+
+* If no error handler is registered, Express will print authorization errors as stack traces.
+* Using `autorixErrorHandler()` is strongly recommended to avoid this behavior.
+* For protected routes, use `requireAuth: true` in `authorize()` to return a clean `401 Unauthenticated`
+  response when no principal is present.
+
+---
+
+## 🧠 Why is this required?
+
+Express does not support automatic global error handling inside normal middleware.
+For this reason, error handlers must be registered explicitly at the application level.
+
+This design follows the same pattern used by mature Express libraries
+(e.g. `passport`, `express-rate-limit`, `celebrate`).
+
+---
 
 ## 🔗 Related Packages
 

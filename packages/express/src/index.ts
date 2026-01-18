@@ -7,3 +7,4 @@ export * from "./context/principal";
 export * from "./context/resource";
 
 export * from "./errors/AutorixHttpErrors";
+export * from "./middleware/autorixErrorHandler";

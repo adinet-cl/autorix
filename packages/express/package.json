@@ -1,6 +1,6 @@
 {
   "name": "@autorix/express",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Express.js integration for Autorix policy-based authorization (RBAC + ABAC)",
   "keywords": [
     "authorization",
@@ -17,7 +17,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/chechooxd/autorix.git",
-    "directory": "packages/autorix-express"
+    "directory": "packages/express"
   },
   "bugs": {
     "url": "https://github.com/chechooxd/autorix/issues"
