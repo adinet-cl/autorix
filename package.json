@@ -8,7 +8,10 @@
     "co": "sui-mono commit",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
-    "clean": "pnpm -r run clean"
+    "clean": "pnpm -r run clean",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "keywords": [],
   "author": "Sergio Galaz <sergiogalaz60@gmail.com>",
@@ -21,6 +24,7 @@
     "prettier": "^3.5.3",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
+    "vitepress": "^1.6.4",
     "vitest": "^3.1.3"
   }
 }
