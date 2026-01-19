@@ -39,10 +39,10 @@ function sameScope(a: AutorixScope, b: AutorixScope): boolean {
  *   id: 'admin-policy',
  *   scope: { type: 'TENANT', id: 't1' },
  *   document: {
- *     statements: [{
- *       effect: 'allow',
- *       actions: ['*'],
- *       resources: ['*']
+ *     Statement: [{
+ *       Effect: 'Allow',
+ *       Action: ['*'],
+ *       Resource: ['*']
  *     }]
  *   }
  * });

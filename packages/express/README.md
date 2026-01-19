@@ -341,30 +341,60 @@ This works well with wildcard policies but requires your actions follow the `<re
 
 ```typescript
 import { autorixExpress, authorize } from '@autorix/express';
-import { Autorix } from '@autorix/core';
+import { evaluateAll } from '@autorix/core';
 import { MemoryPolicyProvider } from '@autorix/storage';
 
 const provider = new MemoryPolicyProvider();
-const autorix = new Autorix(provider);
 
-// Add policies
-await provider.attachPolicy({
+// Add policy
+provider.addPolicy({
+  id: 'admin-policy',
   scope: { type: 'TENANT', id: 't1' },
-  policyId: 'admin-policy',
-  principals: [{ type: 'ROLE', id: 'admin' }]
+  document: {
+    Version: '2024-01-01',
+    Statement: [{
+      Effect: 'Allow',
+      Action: ['*'],
+      Resource: ['*']
+    }]
+  }
 });
 
-await provider.setPolicy('admin-policy', {
-  Version: '2024-01-01',
-  Statement: [{
-    Effect: 'Allow',
-    Action: ['*'],
-    Resource: ['*']
-  }]
+// Attach to admin role
+provider.attachPolicy({
+  policyId: 'admin-policy',
+  scope: { type: 'TENANT', id: 't1' },
+  principal: { type: 'ROLE', id: 'admin' }
 });
+
+// Create enforcer
+const enforcer = {
+  can: async (input: { action: string; resource: string; context: any }) => {
+    if (!input.context?.principal) {
+      return { allowed: false, reason: 'Unauthenticated' };
+    }
+
+    const scope = { type: 'TENANT', id: input.context.tenantId || 't1' };
+
+    const policies = await provider.getPolicies({
+      scope,
+      principal: { type: 'USER', id: input.context.principal.id },
+      roleIds: input.context.principal?.roles,
+    });
+
+    const result = evaluateAll({
+      policies: policies.map(p => p.document),
+      action: input.action,
+      resource: input.resource,
+      ctx: { scope, principal: input.context.principal },
+    });
+
+    return { allowed: result.allowed, reason: result.reason };
+  }
+};
 
 app.use(autorixExpress({
-  enforcer: autorix,
+  enforcer,
   getPrincipal: (req) => req.user || null,
   getTenant: (req) => req.user?.tenantId || 't1'
 }));
@@ -380,18 +410,29 @@ app.get('/admin/settings',
 
 ```typescript
 // Policy with conditions - checks resource attributes
-await provider.setPolicy('owner-only', {
-  Version: '2024-01-01',
-  Statement: [{
-    Effect: 'Allow',
-    Action: ['post:update', 'post:delete'],
-    Resource: ['post/*'],  // ← Matches 'post/123' string pattern
-    Condition: {
-      StringEquals: {
-        'resource.authorId': '${principal.id}'  // ← Checks resource object property
+provider.addPolicy({
+  id: 'owner-only',
+  scope: { type: 'TENANT', id: 'my-org' },
+  document: {
+    Version: '2024-01-01',
+    Statement: [{
+      Effect: 'Allow',
+      Action: ['post:update', 'post:delete'],
+      Resource: ['post/*'],  // ← Matches 'post/123' string pattern
+      Condition: {
+        StringEquals: {
+          'resource.authorId': '${principal.id}'  // ← Checks resource object property
+        }
       }
-    }
-  }]
+    }]
+  }
+});
+
+// Attach to all authenticated users
+provider.attachPolicy({
+  policyId: 'owner-only',
+  scope: { type: 'TENANT', id: 'my-org' },
+  principal: { type: 'ROLE', id: 'user' }
 });
 
 // Route with resource loading
@@ -422,7 +463,7 @@ app.put('/posts/:id',
 
 ```typescript
 app.use(autorixExpress({
-  enforcer: autorix,
+  enforcer,  // ← Use the enforcer object created earlier
   getPrincipal: (req) => req.user,
   getContext: (req) => ({
     ip: req.ip,
@@ -436,17 +477,28 @@ app.use(autorixExpress({
 }));
 
 // Policy can check custom attributes
-await provider.setPolicy('business-hours', {
-  Version: '2024-01-01',
-  Statement: [{
-    Effect: 'Allow',
-    Action: ['report:generate'],
-    Resource: ['*'],
-    Condition: {
-      NumericGreaterThanEquals: { 'context.attributes.timeOfDay': 9 },
-      NumericLessThanEquals: { 'context.attributes.timeOfDay': 17 }
-    }
-  }]
+provider.addPolicy({
+  id: 'business-hours',
+  scope: { type: 'TENANT', id: 'my-org' },
+  document: {
+    Version: '2024-01-01',
+    Statement: [{
+      Effect: 'Allow',
+      Action: ['report:generate'],
+      Resource: ['*'],
+      Condition: {
+        NumericGreaterThanEquals: { 'context.attributes.timeOfDay': 9 },
+        NumericLessThanEquals: { 'context.attributes.timeOfDay': 17 }
+      }
+    }]
+  }
+});
+
+// Attach to users who need reports
+provider.attachPolicy({
+  policyId: 'business-hours',
+  scope: { type: 'TENANT', id: 'my-org' },
+  principal: { type: 'ROLE', id: 'analyst' }
 });
 ```
 
@@ -478,7 +530,7 @@ app.post('/critical-action', async (req, res) => {
 
 ```typescript
 app.use(autorixExpress({
-  enforcer: autorix,
+  enforcer,  // ← Use the enforcer defined earlier
   getPrincipal: (req) => req.user,
   getTenant: (req) => {
     // Extract from subdomain
@@ -488,16 +540,16 @@ app.use(autorixExpress({
 }));
 
 // Each tenant has isolated policies
-await provider.attachPolicy({
-  scope: { type: 'TENANT', id: 'acme-corp' },
+provider.attachPolicy({
   policyId: 'acme-admins',
-  principals: [{ type: 'USER', id: 'alice' }]
+  scope: { type: 'TENANT', id: 'acme-corp' },
+  principal: { type: 'USER', id: 'alice' }
 });
 
-await provider.attachPolicy({
-  scope: { type: 'TENANT', id: 'other-corp' },
+provider.attachPolicy({
   policyId: 'other-admins',
-  principals: [{ type: 'USER', id: 'bob' }]
+  scope: { type: 'TENANT', id: 'other-corp' },
+  principal: { type: 'USER', id: 'bob' }
 });
 ```
 
@@ -505,7 +557,7 @@ await provider.attachPolicy({
 
 ```typescript
 app.use(autorixExpress({
-  enforcer: autorix,
+  enforcer,  // ← Use the enforcer defined earlier
   getPrincipal: (req) => req.user,
   onDecision: (decision, req) => {
     // Log all authorization decisions

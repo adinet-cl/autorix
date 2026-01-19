@@ -61,11 +61,11 @@ await provider.addPolicy({
   id: 'admin-policy',
   scope: { type: 'TENANT', id: 't1' },
   document: {
-    statements: [
+    Statement: [
       {
-        effect: 'allow',
-        actions: ['*'],
-        resources: ['*']
+        Effect: 'Allow',
+        Action: ['*'],
+        Resource: ['*']
       }
     ]
   }

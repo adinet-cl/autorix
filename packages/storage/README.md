@@ -58,11 +58,11 @@ provider.addPolicy({
   id: 'policy-1',
   scope: { type: 'TENANT', id: 'tenant-123' },
   document: {
-    statements: [
+    Statement: [
       {
-        effect: 'allow',
-        actions: ['document:*'],
-        resources: ['document/*'],
+        Effect: 'Allow',
+        Action: ['document:*'],
+        Resource: ['document/*'],
       },
     ],
   },

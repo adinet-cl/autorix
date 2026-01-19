@@ -40,24 +40,26 @@ import { APP_GUARD } from '@nestjs/core';
 import { AutorixModule, AutorixGuard } from '@autorix/nestjs';
 import { MemoryPolicyProvider } from '@autorix/storage';
 
+// Setup provider with policies
+const policyProvider = new MemoryPolicyProvider();
+policyProvider.addPolicy({
+  id: 'policy-1',
+  scope: { type: 'TENANT', id: 'tenant-123' },
+  document: {
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: ['document:read', 'document:list'],
+        Resource: 'document/*',
+      },
+    ],
+  },
+});
+
 @Module({
   imports: [
     AutorixModule.forRoot({
-      policyProvider: new MemoryPolicyProvider([
-        {
-          id: 'policy-1',
-          scope: { type: 'TENANT', id: 'tenant-123' },
-          document: {
-            Statement: [
-              {
-                Effect: 'Allow',
-                Action: ['document:read', 'document:list'],
-                Resource: 'document/*',
-              },
-            ],
-          },
-        },
-      ]),
+      policyProvider,
     }),
   ],
   providers: [

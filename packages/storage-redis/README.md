@@ -53,11 +53,11 @@ await provider.addPolicy({
   id: 'admin-policy',
   scope: { type: 'TENANT', id: 't1' },
   document: {
-    statements: [
+    Statement: [
       {
-        effect: 'allow',
-        actions: ['*'],
-        resources: ['*']
+        Effect: 'Allow',
+        Action: ['*'],
+        Resource: ['*']
       }
     ]
   }
@@ -226,8 +226,8 @@ await provider.addPolicy({
   id: 'temp-access-session-123',
   scope: { type: 'TENANT', id: 't1' },
   document: {
-    statements: [
-      { effect: 'allow', actions: ['document:read'], resources: ['document/xyz'] }
+    Statement: [
+      { Effect: 'Allow', Action: ['document:read'], Resource: ['document/xyz'] }
     ]
   }
 }, 3600); // expires in 1 hour
