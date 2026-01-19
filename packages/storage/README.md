@@ -114,6 +114,14 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const provider = new PrismaPolicyProvider(prisma);
 // Run: npx prisma migrate dev
+
+// Redis
+import { RedisPolicyProvider } from '@autorix/storage-redis';
+import { createClient } from 'redis';
+
+const redis = createClient({ url: 'redis://localhost:6379' });
+await redis.connect();
+const provider = new RedisPolicyProvider(redis);
 ```
 
 ## 📚 Core Concepts
@@ -304,6 +312,24 @@ const provider = new PrismaPolicyProvider(prisma);
 
 📦 **Package:** `@autorix/storage-prisma`  
 📖 **[Full Documentation](https://www.npmjs.com/package/@autorix/storage-prisma)**
+
+### Redis Adapter
+
+High-performance in-memory adapter for distributed systems. Perfect as a cache layer or for temporary policies.
+
+```typescript
+import { createClient } from 'redis';
+import { RedisPolicyProvider } from '@autorix/storage-redis';
+
+const redis = createClient({ url: 'redis://localhost:6379' });
+await redis.connect();
+const provider = new RedisPolicyProvider(redis);
+```
+
+📦 **Package:** `@autorix/storage-redis`  
+📖 **[Full Documentation](https://www.npmjs.com/package/@autorix/storage-redis)**
+
+**Features:** TTL support, Redis Cluster compatible, batch operations, cache layer patterns
 
 ### Custom Adapters
 

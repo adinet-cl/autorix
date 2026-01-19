@@ -42,8 +42,7 @@ Install only the adapter you need:
 |---------|----------|---------|
 | PostgreSQL | PostgreSQL | `@autorix/storage-postgres` |
 | MongoDB | MongoDB | `@autorix/storage-mongodb` |
-| Prisma | PostgreSQL, MySQL, SQLite, etc. | `@autorix/storage-prisma` |
-
+| Prisma | PostgreSQL, MySQL, SQLite, etc. | `@autorix/storage-prisma` || Redis | Redis / Redis Cluster | `@autorix/storage-redis` |
 **Why separate packages?** Each adapter has its own database dependencies. This keeps your `node_modules` lean - you only install what you actually use.
 
 ## 🚀 Quick Start
