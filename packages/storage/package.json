@@ -1,8 +1,18 @@
 {
   "name": "@autorix/storage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Storage adapters for Autorix policy evaluator",
   "license": "MIT",
+  "author": "Chechooxd <sergiogalaz60@gmail.com>",
+  "homepage": "https://github.com/adinet-cl/autorix",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adinet-cl/autorix.git",
+    "directory": "packages/storage"
+  },
+  "bugs": {
+    "url": "https://github.com/adinet-cl/autorix/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

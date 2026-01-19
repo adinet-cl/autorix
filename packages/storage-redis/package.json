@@ -10,8 +10,17 @@
     "adapter",
     "cache"
   ],
-  "author": "Adinet",
   "license": "MIT",
+  "author": "Chechooxd <sergiogalaz60@gmail.com>",
+  "homepage": "https://github.com/adinet-cl/autorix",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adinet-cl/autorix.git",
+    "directory": "packages/storage-redis"
+  },
+  "bugs": {
+    "url": "https://github.com/adinet-cl/autorix/issues"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
