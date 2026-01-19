@@ -30,7 +30,7 @@ yarn add @autorix/express @autorix/core @autorix/storage
 
 ## 🚀 Quick Start
 
-### Basic Setup
+### Complete Example
 
 ```typescript
 import express from 'express';
@@ -41,52 +41,96 @@ import { MemoryPolicyProvider } from '@autorix/storage';
 const app = express();
 app.use(express.json());
 
+// Simple authentication middleware (replace with JWT/Passport in production)
+app.use((req, res, next) => {
+  // Simulate authentication - extract from header/token
+  const authHeader = req.headers.authorization;
+  
+  if (authHeader) {
+    // In production: verify JWT token, validate session, etc.
+    // For demo purposes, we'll parse a simple format: "Bearer userId:role1,role2"
+    const token = authHeader.replace('Bearer ', '');
+    const [id, rolesStr] = token.split(':');
+    const roles = rolesStr ? rolesStr.split(',') : [];
+    
+    req.user = {
+      id,
+      roles,
+      tenantId: 't1' // In production: extract from token or database
+    };
+  }
+  
+  next();
+});
+
 // Initialize policy provider
 const policyProvider = new MemoryPolicyProvider();
+const scope = { type: 'TENANT' as const, id: 't1' };
+
+// Mock data for demonstration
+type Post = { id: string; ownerId: string };
+const posts: Post[] = [
+  { id: 'p1', ownerId: 'u1' },
+  { id: 'p2', ownerId: 'u2' },
+];
+
+// Add policies
+policyProvider.addPolicy({
+  id: 'admin-policy',
+  scope,
+  document: {
+    Version: '2025-01-01',
+    Statement: [
+      {
+        Sid: 'AllowUserListForAdmins',
+        Effect: 'Allow',
+        Action: ['user:*'],
+        Resource: ['*'],
+      },
+      {
+        Sid: 'AllowPostDeleteForAuthors',
+        Effect: 'Allow',
+        Action: ['post:delete'],
+        Resource: ['post/*'],
+        Condition: {
+          StringEquals: {
+            'resource.ownerId': '${principal.id}',
+          },
+        },
+      },
+    ],
+  },
+});
+
+// Attach policy to admin role
+policyProvider.attachPolicy({
+  policyId: 'admin-policy',
+  scope,
+  principal: { type: 'ROLE', id: 'admin' },
+});
 
 // Create enforcer
 const enforcer = {
   can: async (input: { action: string; resource: string; context: any }) => {
-    // ✅ IMPORTANT: If your app allows unauthenticated requests, guard here
-    // to avoid storage/providers crashing when principal is null.
     if (!input.context?.principal) {
       return { allowed: false, reason: 'Unauthenticated' };
     }
 
-    // Build scope for policy lookup
-    const scope = { 
-      type: 'TENANT', 
-      id: input.context.tenantId || 'default' 
-    };
+    const { id, roles } = input.context.principal;
 
     // Fetch policies from storage
     const policies = await policyProvider.getPolicies({
       scope,
-      principal: { type: 'USER', id: input.context.principal.id },  // ← Must include type
-      roleIds: input.context.principal?.roles,
+      principal: { type: 'USER', id },
+      roleIds: roles,
     });
-
-    // Transform Express context to Core context format
-    const coreContext = {
-      scope,
-      principal: input.context.principal,
-      resource: input.context.resource,  // Resource object for conditions
-      request: {
-        ip: input.context.ip,
-        headers: { 'user-agent': input.context.userAgent },
-      },
-      context: {
-        scope,
-        ...input.context.attributes,
-      },
-    };
 
     // Evaluate all policies
     const result = evaluateAll({
       policies: policies.map(p => p.document),
       action: input.action,
-      resource: input.resource,  // ← String for matching (e.g., 'post/123')
-      ctx: coreContext,
+      resource: input.resource,
+      ctx: input.context,
     });
 
     return { allowed: result.allowed, reason: result.reason };
@@ -97,11 +141,9 @@ const enforcer = {
 app.use(autorixExpress({
   enforcer,
   getPrincipal: async (req) => {
-    // Extract user from your auth middleware (e.g., JWT/Passport/session)
     return req.user ? { id: req.user.id, roles: req.user.roles } : null;
   },
   getTenant: async (req) => {
-    // Extract tenant/organization ID
     return req.user?.tenantId || null;
   }
 }));
@@ -111,7 +153,15 @@ app.get(
   '/admin/users',
   authorize('user:list', { requireAuth: true }),
   (req, res) => {
-    res.json({ message: 'Authorized!' });
+    res.json({ message: 'Authorized to list users!' });
+  }
+);
+
+app.post(
+  '/posts',
+  authorize('post:create', { requireAuth: true }),
+  (req, res) => {
+    res.json({ message: 'Post created!' });
   }
 );
 
@@ -123,7 +173,10 @@ app.delete(
     resource: {
       type: 'post',
       idFrom: (req) => req.params.id,
-      loader: async (id) => await db.posts.findById(id),
+      loader: async (id) => {
+        // Load resource to check conditions (e.g., ownerId)
+        return posts.find(p => p.id === id) || null;
+      },
     }
   }),
   (req, res) => {
@@ -135,7 +188,25 @@ app.delete(
 // so authorization errors return clean HTTP responses (401/403) instead of stack traces.
 app.use(autorixErrorHandler());
 
-app.listen(3000);
+app.listen(3000, () => {
+  console.log('Server running on http://localhost:3000');
+});
+```
+
+**Testing the example:**
+
+```bash
+# Request without auth (will get 401)
+curl http://localhost:3000/admin/users
+
+# Admin user can list users
+curl -H "Authorization: Bearer u1:admin" http://localhost:3000/admin/users
+
+# User u1 can delete their own post (p1)
+curl -X DELETE -H "Authorization: Bearer u1:admin" http://localhost:3000/posts/p1
+
+# User u2 cannot delete u1's post (will get 403)
+curl -X DELETE -H "Authorization: Bearer u2:user" http://localhost:3000/posts/p1
 ```
 
 ## 📚 API Reference
@@ -235,9 +306,6 @@ authorize({
   resource: { type: 'user', id: '123', ownerId: 'u1' }
 })
 ```
-  resource: { type: 'user', id: '123', data: { ownerId: 'u1' } }
-})
-```
 
 ## 🔑 Understanding Resources
 
@@ -330,10 +398,6 @@ When no resource is specified, it's inferred from the action:
 - `'document:read'` → `'document/*'`
 
 This works well with wildcard policies but requires your actions follow the `<resource>:<action>` pattern.
-    }
-  }
-})
-```
 
 ## 🎯 Usage Examples
 
