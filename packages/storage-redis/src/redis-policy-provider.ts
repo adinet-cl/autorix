@@ -67,6 +67,26 @@ import type {
 export class RedisPolicyProvider implements PolicyProvider {
   private readonly keyPrefix: string;
 
+  /**
+   * Creates a new Redis policy provider.
+   * 
+   * @param redis - Redis client instance (must be connected)
+   * @param options - Configuration options
+   * @param options.keyPrefix - Key prefix for all Redis keys (default: 'autorix')
+   * 
+   * @example
+   * ```typescript
+   * import { createClient } from 'redis';
+   * import { RedisPolicyProvider } from '@autorix/storage-redis';
+   * 
+   * const redis = createClient({ url: 'redis://localhost:6379' });
+   * await redis.connect();
+   * 
+   * const provider = new RedisPolicyProvider(redis, {
+   *   keyPrefix: 'myapp:autorix'
+   * });
+   * ```
+   */
   constructor(
     private redis: RedisClientType,
     options?: {
@@ -125,7 +145,27 @@ export class RedisPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Add or update a policy
+   * Add or update a policy.
+   * 
+   * @param params - Policy parameters
+   * @param ttl - Optional TTL in seconds (for auto-expiring policies)
+   * 
+   * @example
+   * ```typescript
+   * // Permanent policy
+   * await provider.addPolicy({
+   *   id: 'admin-policy',
+   *   scope: { type: 'TENANT', id: 't1' },
+   *   document: { statements: [] }
+   * });
+   * 
+   * // Temporary policy (expires in 1 hour)
+   * await provider.addPolicy({
+   *   id: 'temp-access',
+   *   scope: { type: 'TENANT', id: 't1' },
+   *   document: { statements: [] }
+   * }, 3600);
+   * ```
    */
   async addPolicy(
     params: {
@@ -202,7 +242,20 @@ export class RedisPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Batch attach multiple policies for better performance
+   * Batch attach multiple policies for better performance.
+   * 
+   * Uses Redis pipeline to execute all operations in a single round-trip.
+   * 
+   * @param attachments - Array of attachments
+   * 
+   * @example
+   * ```typescript
+   * await provider.attachPolicies([
+   *   { policyId: 'p1', scope, principal: { type: 'USER', id: 'u1' } },
+   *   { policyId: 'p2', scope, principal: { type: 'USER', id: 'u1' } },
+   *   { policyId: 'p3', scope, principal: { type: 'ROLE', id: 'admin' } }
+   * ]);
+   * ```
    */
   async attachPolicies(
     attachments: Array<{
@@ -242,7 +295,21 @@ export class RedisPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Get all policies in a scope (useful for admin/debugging)
+   * Get all policies in a scope (useful for admin/debugging).
+   * 
+   * Uses SCAN to iterate through all policy keys in the scope.
+   * 
+   * @param scope - Scope to query
+   * @returns All policies in the scope
+   * 
+   * @example
+   * ```typescript
+   * const allPolicies = await provider.getAllPoliciesInScope({
+   *   type: 'TENANT',
+   *   id: 't1'
+   * });
+   * console.log(`Found ${allPolicies.length} policies`);
+   * ```
    */
   async getAllPoliciesInScope(scope: AutorixScope): Promise<PolicySource[]> {
     const pattern = this.getPolicyPattern(scope);
@@ -270,7 +337,17 @@ export class RedisPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Clear all policies and attachments in a scope
+   * Clear all policies and attachments in a scope.
+   * 
+   * **Warning:** This deletes all policies and attachments. Use with caution.
+   * 
+   * @param scope - Scope to clear
+   * 
+   * @example
+   * ```typescript
+   * // Clear all policies in tenant
+   * await provider.clearScope({ type: 'TENANT', id: 't1' });
+   * ```
    */
   async clearScope(scope: AutorixScope): Promise<void> {
     const policyPattern = this.getPolicyPattern(scope);

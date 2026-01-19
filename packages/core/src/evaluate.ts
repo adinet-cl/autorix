@@ -9,6 +9,51 @@ function statementId(stmt: Statement, index: number): string {
   return stmt.Sid ?? `stmt#${index}`;
 }
 
+/**
+ * Evaluates a single policy document against an action and resource.
+ * 
+ * Implements AWS IAM-style policy evaluation logic:
+ * - Explicit Deny always wins
+ * - Then checks for Explicit Allow
+ * - Defaults to Deny if no match
+ * 
+ * @param input - Evaluation input parameters
+ * @param input.action - The action being performed (e.g., 'post:create', 'user:delete')
+ * @param input.resource - The resource being accessed (e.g., 'post/123', 'user/*')
+ * @param input.policy - The policy document to evaluate
+ * @param input.ctx - Context object for condition evaluation (principal, resource data, environment)
+ * @param input.validate - Whether to validate the policy document (default: true)
+ * 
+ * @returns Decision object with allowed flag, reason, and matched statement IDs
+ * 
+ * @example
+ * ```typescript
+ * import { evaluate } from '@autorix/core';
+ * 
+ * const decision = evaluate({
+ *   action: 'post:create',
+ *   resource: 'post/*',
+ *   policy: {
+ *     Statement: [
+ *       {
+ *         Effect: 'Allow',
+ *         Action: 'post:*',
+ *         Resource: 'post/*'
+ *       }
+ *     ]
+ *   },
+ *   ctx: {
+ *     principal: { id: 'user-123' },
+ *     resource: {},
+ *     context: {}
+ *   }
+ * });
+ * 
+ * if (decision.allowed) {
+ *   console.log('Access granted');
+ * }
+ * ```
+ */
 export function evaluate(input: EvaluateInput): Decision {
   const { action, resource, policy, ctx } = input;
   const matchedAllow: string[] = [];

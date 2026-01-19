@@ -76,6 +76,17 @@ import type {
 export class PostgresPolicyProvider implements PolicyProvider {
   constructor(private pool: Pool) {}
 
+  /**
+   * Get all policies applicable to a principal within a scope.
+   * 
+   * Executes an optimized SQL query with JOIN to fetch policies attached to:
+   * - The principal directly (user)
+   * - Any of the principal's roles
+   * - Any of the principal's groups
+   * 
+   * @param input - Query parameters
+   * @returns Array of policy sources (id + document)
+   */
   async getPolicies(input: GetPoliciesInput): Promise<PolicySource[]> {
     const { scope, principal, roleIds = [], groupIds = [] } = input;
 
@@ -118,7 +129,29 @@ export class PostgresPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Add or update a policy
+   * Add or update a policy.
+   * 
+   * Uses ON CONFLICT to update if policy ID already exists.
+   * 
+   * @param params - Policy parameters
+   * @param params.id - Unique policy identifier
+   * @param params.scope - Scope where policy applies
+   * @param params.document - Policy document (stored as JSONB)
+   * 
+   * @example
+   * ```typescript
+   * await provider.addPolicy({
+   *   id: 'editor-policy',
+   *   scope: { type: 'TENANT', id: 't1' },
+   *   document: {
+   *     statements: [{
+   *       effect: 'allow',
+   *       actions: ['post:read', 'post:update'],
+   *       resources: ['post/*']
+   *     }]
+   *   }
+   * });
+   * ```
    */
   async addPolicy(params: {
     id: string;
@@ -135,7 +168,31 @@ export class PostgresPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Attach a policy to a principal (user, role, or group)
+   * Attach a policy to a principal (user, role, or group).
+   * 
+   * Uses ON CONFLICT to ignore duplicate attachments.
+   * 
+   * @param params - Attachment parameters
+   * @param params.policyId - ID of policy to attach
+   * @param params.scope - Scope for attachment
+   * @param params.principal - Principal (user/role/group)
+   * 
+   * @example
+   * ```typescript
+   * // Attach to user
+   * await provider.attachPolicy({
+   *   policyId: 'editor-policy',
+   *   scope: { type: 'TENANT', id: 't1' },
+   *   principal: { type: 'USER', id: 'user-123' }
+   * });
+   * 
+   * // Attach to role
+   * await provider.attachPolicy({
+   *   policyId: 'editor-policy',
+   *   scope: { type: 'TENANT', id: 't1' },
+   *   principal: { type: 'ROLE', id: 'editor' }
+   * });
+   * ```
    */
   async attachPolicy(params: {
     policyId: string;
@@ -157,7 +214,9 @@ export class PostgresPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Remove a policy attachment
+   * Remove a policy attachment.
+   * 
+   * @param params - Detachment parameters
    */
   async detachPolicy(params: {
     policyId: string;
@@ -182,14 +241,32 @@ export class PostgresPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Delete a policy and all its attachments (cascade delete)
+   * Delete a policy and all its attachments.
+   * 
+   * Cascade delete is handled by the foreign key constraint.
+   * 
+   * @param policyId - ID of policy to delete
    */
   async deletePolicy(policyId: string): Promise<void> {
     await this.pool.query(`DELETE FROM policies WHERE id = $1`, [policyId]);
   }
 
   /**
-   * Initialize database schema (for development/testing)
+   * Initialize database schema (tables and indexes).
+   * 
+   * Creates policies and policy_attachments tables if they don't exist.
+   * Safe to call multiple times (uses CREATE TABLE IF NOT EXISTS).
+   * 
+   * **Note:** For production, use proper database migrations instead.
+   * 
+   * @example
+   * ```typescript
+   * const pool = new Pool({ host: 'localhost', database: 'myapp' });
+   * const provider = new PostgresPolicyProvider(pool);
+   * 
+   * // Initialize schema on first run
+   * await provider.initSchema();
+   * ```
    */
   async initSchema(): Promise<void> {
     await this.pool.query(`

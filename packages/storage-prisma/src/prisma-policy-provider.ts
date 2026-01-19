@@ -191,7 +191,20 @@ export class PrismaPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Batch attach multiple policies at once for better performance
+   * Batch attach multiple policies at once for better performance.
+   * 
+   * Uses Prisma's createMany with skipDuplicates for efficient bulk inserts.
+   * 
+   * @param params - Array of attachments
+   * 
+   * @example
+   * ```typescript
+   * await provider.attachPolicies([
+   *   { policyId: 'p1', scope, principal: { type: 'USER', id: 'u1' } },
+   *   { policyId: 'p2', scope, principal: { type: 'USER', id: 'u1' } },
+   *   { policyId: 'p1', scope, principal: { type: 'ROLE', id: 'admin' } }
+   * ]);
+   * ```
    */
   async attachPolicies(
     params: Array<{

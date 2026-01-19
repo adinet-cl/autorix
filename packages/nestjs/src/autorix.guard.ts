@@ -71,6 +71,41 @@ function buildResourceString(type?: string, id?: string) {
   return `${type}/${id ?? "*"}`;
 }
 
+/**
+ * NestJS guard that enforces authorization based on policy evaluation.
+ * 
+ * This guard:
+ * 1. Resolves principal, scope, and resource from the execution context
+ * 2. Fetches applicable policies from the PolicyProvider
+ * 3. Evaluates policies against the requested action and resource
+ * 4. Allows or denies access based on the evaluation result
+ * 
+ * Use with `@UseGuards(AutorixGuard)` and `@AutorixPolicy()` decorator.
+ * 
+ * @example
+ * ```typescript
+ * // In your controller
+ * @Controller('posts')
+ * @UseGuards(AutorixGuard)
+ * export class PostsController {
+ *   @Post()
+ *   @AutorixPolicy('post:create')
+ *   async createPost(@Body() data: CreatePostDto) {
+ *     return this.postsService.create(data);
+ *   }
+ * 
+ *   @Get(':id')
+ *   @AutorixPolicy('post:read')
+ *   @AutorixResource((ctx) => ({
+ *     type: 'post',
+ *     id: ctx.switchToHttp().getRequest().params.id
+ *   }))
+ *   async getPost(@Param('id') id: string) {
+ *     return this.postsService.findById(id);
+ *   }
+ * }
+ * ```
+ */
 @Injectable()
 export class AutorixGuard implements CanActivate {
   constructor(

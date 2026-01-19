@@ -15,6 +15,76 @@ declare global {
   }
 }
 
+/**
+ * Express middleware that adds authorization capabilities to requests.
+ * 
+ * This middleware:
+ * 1. Builds authorization context from the request (principal, scope, environment)
+ * 2. Attaches `req.autorix` with `can()` and `enforce()` methods
+ * 3. Should be registered before route handlers that need authorization
+ * 
+ * @param opts - Configuration options
+ * @param opts.enforcer - Enforcer with policyProvider and can() method
+ * @param opts.principal - Function to extract principal from request (e.g., from JWT)
+ * @param opts.scope - Function to extract scope from request (e.g., tenant ID)
+ * @param opts.environment - Optional function to extract environment attributes
+ * @param opts.onDecision - Optional callback invoked after each authorization decision
+ * 
+ * @returns Express middleware function
+ * 
+ * @example
+ * ```typescript
+ * import { autorixExpress } from '@autorix/express';
+ * import { MemoryPolicyProvider } from '@autorix/storage';
+ * import { evaluateAll } from '@autorix/core';
+ * 
+ * const provider = new MemoryPolicyProvider();
+ * // ... add policies
+ * 
+ * app.use(autorixExpress({
+ *   enforcer: {
+ *     policyProvider: provider,
+ *     can: async ({ action, resource, context }) => {
+ *       const policies = await provider.getPolicies({
+ *         scope: context.scope,
+ *         principal: context.principal,
+ *         roleIds: context.roleIds,
+ *         groupIds: context.groupIds
+ *       });
+ *       
+ *       const result = evaluateAll({
+ *         action,
+ *         resource,
+ *         policies: policies.map(p => p.document),
+ *         ctx: {
+ *           principal: context.principal,
+ *           resource: context.resourceObject ?? {},
+ *           context: context.environment ?? {}
+ *         }
+ *       });
+ *       
+ *       return result.decision === 'allow';
+ *     }
+ *   },
+ *   principal: async (req) => ({
+ *     type: 'USER',
+ *     id: req.user?.id || 'anonymous'
+ *   }),
+ *   scope: async (req) => ({
+ *     type: 'TENANT',
+ *     id: req.headers['x-tenant-id']
+ *   })
+ * }));
+ * 
+ * // Now use in routes
+ * app.get('/posts', async (req, res) => {
+ *   if (!await req.autorix.can('post:list')) {
+ *     return res.status(403).send('Forbidden');
+ *   }
+ *   // ... return posts
+ * });
+ * ```
+ */
 export function autorixExpress(opts: AutorixExpressOptions) {
   return async function autorixMiddleware(req: Request, _res: Response, next: NextFunction) {
     try {

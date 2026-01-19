@@ -70,6 +70,36 @@ function validateStatement(stmt: unknown, errors: string[], index: number) {
   validateConditionBlock(s.Condition, errors, `${p}.Condition`);
 }
 
+/**
+ * Validates a policy document structure.
+ * 
+ * Checks that the policy document follows the correct schema:
+ * - Has a Statement array
+ * - Each statement has valid Effect, Action, Resource
+ * - Conditions use supported operators (StringEquals, StringLike, NumericEquals, Bool)
+ * 
+ * @param policy - The policy document to validate
+ * @returns Object with `valid` boolean and `errors` array of error messages
+ * 
+ * @example
+ * ```typescript
+ * import { validatePolicyDocument } from '@autorix/core';
+ * 
+ * const result = validatePolicyDocument({
+ *   Statement: [
+ *     {
+ *       Effect: 'Allow',
+ *       Action: 'post:*',
+ *       Resource: 'post/*'
+ *     }
+ *   ]
+ * });
+ * 
+ * if (!result.valid) {
+ *   console.error('Invalid policy:', result.errors);
+ * }
+ * ```
+ */
 export function validatePolicyDocument(policy: unknown): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
@@ -88,6 +118,29 @@ export function validatePolicyDocument(policy: unknown): { valid: boolean; error
   return { valid: errors.length === 0, errors };
 }
 
+/**
+ * Validates a policy document and throws an error if invalid.
+ * 
+ * This is a convenience function that calls validatePolicyDocument() and throws
+ * AutorixPolicyValidationError if validation fails.
+ * 
+ * @param policy - The policy document to validate
+ * @throws {AutorixPolicyValidationError} If the policy is invalid
+ * 
+ * @example
+ * ```typescript
+ * import { assertValidPolicyDocument } from '@autorix/core';
+ * 
+ * try {
+ *   assertValidPolicyDocument(policyDoc);
+ *   // Policy is valid, continue
+ * } catch (error) {
+ *   if (error instanceof AutorixPolicyValidationError) {
+ *     console.error('Validation errors:', error.errors);
+ *   }
+ * }
+ * ```
+ */
 export function assertValidPolicyDocument(policy: unknown): asserts policy is PolicyDocument {
   const res = validatePolicyDocument(policy);
   if (!res.valid) {

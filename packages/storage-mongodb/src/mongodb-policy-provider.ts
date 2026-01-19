@@ -73,6 +73,14 @@ export class MongoDBPolicyProvider implements PolicyProvider {
     this.attachments = db.collection<AttachmentDoc>("policy_attachments");
   }
 
+  /**
+   * Get all policies applicable to a principal within a scope.
+   * 
+   * Uses MongoDB aggregation to find attachments, then fetches policies.
+   * 
+   * @param input - Query parameters
+   * @returns Array of policy sources
+   */
   async getPolicies(input: GetPoliciesInput): Promise<PolicySource[]> {
     const { scope, principal, roleIds = [], groupIds = [] } = input;
 
@@ -199,7 +207,15 @@ export class MongoDBPolicyProvider implements PolicyProvider {
   }
 
   /**
-   * Create recommended indexes for optimal query performance
+   * Create recommended indexes for optimal query performance.
+   * 
+   * Should be called once at application startup.
+   * 
+   * @example
+   * ```typescript
+   * const provider = new MongoDBPolicyProvider(db);
+   * await provider.createIndexes();
+   * ```
    */
   async createIndexes(): Promise<void> {
     await Promise.all([
