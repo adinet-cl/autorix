@@ -21,6 +21,19 @@ export default defineConfig({
         ]
       },
       {
+        text: "Packages",
+        items: [
+          { text: "Core", link: "/packages/core" },
+          { text: "Express", link: "/packages/express" },
+          { text: "NestJS", link: "/packages/nestjs" },
+          { text: "Storage", link: "/packages/storage" },
+          { text: "Storage MongoDB", link: "/packages/storage-mongodb" },
+          { text: "Storage Postgres", link: "/packages/storage-postgres" },
+          { text: "Storage Prisma", link: "/packages/storage-prisma" },
+          { text: "Storage Redis", link: "/packages/storage-redis" }
+        ]
+      },
+      {
         text: "Adapters",
         items: [
           { text: "Express", link: "/express" }
